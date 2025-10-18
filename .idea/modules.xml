@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/sedfcee.iml" filepath="$PROJECT_DIR$/.idea/sedfcee.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/sistema_experto_diagnostico.iml" filepath="$PROJECT_DIR$/.idea/sistema_experto_diagnostico.iml" />
     </modules>
   </component>
 </project>
