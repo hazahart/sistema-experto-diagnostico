@@ -7,7 +7,7 @@ try:
 
     # Ruta al directorio 'core/'
     CORE_DIR = CURRENT_FILE_PATH.parent
-    # Ruta al directorio raíz del proyecto 'sistema_experto_diagnostico/'
+    # Ruta al directorio raíz del proyecto 'sistema-experto-diagnostico/'
     BASE_DIR = CORE_DIR.parent
 except NameError:
     BASE_DIR = Path.cwd()
@@ -16,7 +16,7 @@ except NameError:
 DB_DIR = BASE_DIR / "data" / "database"
 DB_PATH = DB_DIR / "diagnostico.db"
 SCHEMA_PATH = DB_DIR / "schema.sql"
-
+DATA_SQL_PATH = DB_DIR / "data.sql"
 
 def get_db_connection() -> sqlite3.Connection | None:
     try:
@@ -36,7 +36,6 @@ def get_db_connection() -> sqlite3.Connection | None:
 
 
 def init_db():
-    print(f"Intentando inicializar la base de datos desde: {SCHEMA_PATH}")
 
     # Verificar si el archivo de esquema existe antes de continuar
     if not SCHEMA_PATH.exists():
@@ -57,12 +56,28 @@ def init_db():
     try:
         conn = get_db_connection()
         if conn:
-            # .executescript() es necesario para ejecutar múltiples sentencias SQL
             conn.executescript(schema_sql)
             conn.commit()
-            print(f"Base de datos inicializada exitosamente en: {DB_PATH}")
+            print(f"Esquema creado correctamente en: {DB_PATH}")
+
+            print(f"Intentando cargar datos iniciales desde: {DATA_SQL_PATH}")
+            if not DATA_SQL_PATH.exists():
+                print(f"Advertencia: No se encontró archivo 'data.sql' en {DATA_SQL_PATH}.")
+                print("La base de datos se creó, pero está vacía.")
+            else:
+                try:
+                    with open(DATA_SQL_PATH, 'r', encoding='utf-8') as f:
+                        data_sql = f.read()
+                    
+                    conn.executescript(data_sql)
+                    conn.commit()
+                    print("Datos cargados correctamente.")
+                except sqlite3.Error as e:
+                    print(f"Error al ejecutar el script de datos (data.sql): {e}")
+
         else:
-            print("No se pudo obtener la conexión a la base de datos para la inicialización.")
+            print("No se pudo obtener la conexión a la base de datos.")
+            
     except sqlite3.Error as e:
         print(f"Error al ejecutar el script de inicialización: {e}")
     finally:

@@ -12,10 +12,10 @@ VALUES
 -- Llenado de la tabla 'fallos'
 INSERT INTO fallos (codigo_fallo, nombre_fallo, solucion_recomendada)
 VALUES
-    ('F-001', 'Capacitor de entrada dañado', 'Reemplazar el capacitor C1 (ej. 100uF/25V) en la etapa de entrada. Verificar polaridad.'),
-    ('F-002', 'Resistencia de protección abierta', 'Reemplazar R10 (ej. 10 Ohm 1/2W) y verificar la causa del corto circuito que la quemó.'),
-    ('F-003', 'Diodo rectificador en corto', 'Reemplazar el diodo D1 (ej. 1N4007) en el puente rectificador. Verificar fusible de entrada.'),
-    ('F-004', 'Regulador de voltaje dañado', 'Reemplazar el regulador U1 (ej. LM7805). Comprobar que no haya sobrecalentamiento.'),
+    ('F-001', 'Capacitor de entrada dañado', 'Reemplazar el capacitor C1 (100uF/25V) en la etapa de entrada. Verificar polaridad.'),
+    ('F-002', 'Resistencia de protección abierta', 'Reemplazar R10 (10 Ohm 1/2W) y verificar la causa del corto circuito que la quemó.'),
+    ('F-003', 'Diodo rectificador en corto', 'Reemplazar el diodo D1 (1N4007) en el puente rectificador. Verificar fusible de entrada.'),
+    ('F-004', 'Regulador de voltaje dañado', 'Reemplazar el regulador U1 (LM7805). Comprobar que no haya sobrecalentamiento.'),
     ('F-005', 'Pista de PCB (circuito impreso) rota', 'Inspeccionar visualmente la placa en busca de fisuras. Reparar la pista cortada con un puente de soldadura.');
 
 -- Llenado de la tabla 'reglas'
