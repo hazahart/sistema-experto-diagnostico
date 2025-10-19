@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Database
+data/database/diagnostico.db
+
 # Distribution / packaging
 .Python
 build/
