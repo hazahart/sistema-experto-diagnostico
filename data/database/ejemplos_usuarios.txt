@@ -1,0 +1,10 @@
+mi disppositivo no prende
+no hay voltaje en el regulador
+huele a quemado
+veo un capacitor inflado
+la resistencia R10 está negra
+no da imagen ni señal
+el foco se calienta demasiado
+la fuente no responde
+veo una parte rota en la placa
+no hay voltaje de salida
