@@ -34,7 +34,7 @@ VALUES
     -- Regla 4: Si el voltaje en el regulador es 0V (S-005) -> Fallo F-004 (Regulador dañado)
     (4, 5),
 
-    -- Regla 5: Si el dispositivo no enciende (S-001) Y hay una pista rota (inspección visual) -> Fallo F-005
+    -- Regla 5: Si el dispositivo no enciende (S-001) Y hay una parte rota (inspección visual) -> Fallo F-005
     (5, 1),
     (5, 4);
 
