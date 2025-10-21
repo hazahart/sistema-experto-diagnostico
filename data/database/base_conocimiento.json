@@ -1,0 +1,46 @@
+[
+  {
+    "codigo_fallo": "F-001",
+    "nombre": "Capacitor de entrada dañado",
+    "sintomas": [
+      "El dispositivo no enciende",
+      "Un capacitor esta visiblemente hinchado o dañafo"
+    ],
+    "solucion": "Reemplazar el capacitor C1 (100uF/25V) en la etapa de entrada. Verificar polaridad."
+  },
+  {
+    "codigo_fallo": "F-002",
+    "nombre": "Resistencia de proteccion abierta",
+    "sintomas": [
+      "Se percibe un olor a quemado",
+      "Resistentencia R10 muestra signos de quemadura (decoloración)"
+    ],
+    "solucion": "Reemplazar R10 (10 Ohm 1/2W) y verificar la causa del corto circuito que la quemo."
+  },
+  {
+    "codigo_fallo": "F-003",
+    "nombre": "Diodo rectificador en corto",
+    "sintomas": [
+      "El dispositivo no enciende",
+      "Se percibe un olor a quemado"
+    ],
+  "solucion": "Remmplazar el diodo D1 (1N4007) en el puente rectificador. Verificar fusible de entrada."
+  },
+  {
+    "codigo_fallo": "F-004",
+    "nombre": "Regulador de voltaje dañado",
+    "sintomas": [
+      "Voltaje 0V en el regulador de 5V"
+    ],
+    "solucion": "Reemplaazar el regulador U1 (LM7805). Comprobar que no haya sobrecalentamiento."
+  },
+  {
+    "codigo_fallo": "F-005",
+    "nombre": "Pista de PCB rota",
+    "sintomas": [
+      "El dispositivo no enciende",
+      "Resistencia R10 muestra signos de quemadura (decoloración)"
+    ],
+    "solucion": "Inspeccionar visualmente la placa en busca de fisuras. Reparar la pista cortada con un puente de soldadura."
+  }
+]
