@@ -1,4 +1,4 @@
-mi disppositivo no prende
+mi dispositivo no prende
 no hay voltaje en el regulador
 huele a quemado
 veo un capacitor inflado

@@ -1,4 +1,3 @@
-# ...existing code...
 import sys
 from core.database import init_db
 from core.motor_inferencia import diagnosticar, sugerir_siguientes_pasos 
