@@ -6,12 +6,10 @@ El sistema utiliza **Python** y una base de datos **SQLite** (con posibilidad de
 
 ---
 
-## Integrantes del equipo
+## Propietarios del proyecto
 
-- **Arreola García Vanessa Fernanda** — Responsable del proyecto
-- **Hernández Ariza Erick Eduardo** — Participante
-- **Ramírez Mireles Gustavo** — Participante
-- **Vera Gómez Jacqueline** — Participante
+- **Arreola García Vanessa Fernanda**
+- **Ramírez Mireles Gustavo**
 
 ---
 

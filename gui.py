@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import scrolledtext, font
 
-from core.database import init_db
-from core.motor_inferencia import diagnosticar, sugerir_siguientes_pasos
+from core.database import init_db, guardar_log_diagnostico 
+from core.motor_prolog import MotorProlog 
 from core.parser_pln import mapear_frase_a_sintoma
 
 
@@ -15,13 +15,27 @@ class SistemaExpertoGUI:
 
         self.sintomas_detectados = []
         self.sugerencias_actuales = []
+        self.motor_prolog = None
+        self.inicializacion_ok = False 
+
+        # 1. Configurar la interfaz de usuario primero (Soluciona el AttributeError)
+        self._setup_ui() 
+
+        # 2. Intentar inicializar sistemas críticos
+        self.agregar_mensaje("Iniciando sistemas...", "sistema")
 
         try:
             init_db()
-        except Exception as e:
-            self.agregar_mensaje(f"Error de BD: {e}", "sistema")
+            self.motor_prolog = MotorProlog()
+            self.inicializacion_ok = True
+            self.agregar_mensaje("Base de Datos y Motor Prolog cargados correctamente.", "sistema")
 
-        self._setup_ui()
+        except ConnectionError as e:
+             self.agregar_mensaje(f"Error de inicialización CRÍTICO (Prolog/Ruta): {e}", "error")
+        except Exception as e:
+            self.agregar_mensaje(f"Error de inicialización (BD/General): {e}", "error")
+
+
         self.agregar_mensaje("Bienvenido. Describe los síntomas de tu circuito (ej: 'no prende', 'huele quemado').",
                              "sistema")
 
@@ -92,17 +106,21 @@ class SistemaExpertoGUI:
         self.entry_msg.delete(0, tk.END)
 
         codigo_sintoma = None
+        
+        # 1. TRATAR LA ENTRADA COMO OPCIÓN NUMÉRICA (LÓGICA RESTAURADA)
         if frase.isdigit() and self.sugerencias_actuales:
             try:
                 idx = int(frase) - 1
                 if 0 <= idx < len(self.sugerencias_actuales):
+                    # Se encontró un síntoma por número
                     codigo_sintoma = self.sugerencias_actuales[idx]['codigo']
                 else:
-                    self.agregar_mensaje("Número fuera de rango.", "error")
+                    self.agregar_mensaje("Número fuera de rango o la opción ya no está disponible.", "error")
                     return
             except ValueError:
-                pass
-
+                pass # No es un número válido, se procede a analizar como frase
+        
+        # 2. TRATAR LA ENTRADA COMO FRASE NATURAL (si no fue una opción numérica)
         if not codigo_sintoma:
             codigo_sintoma = mapear_frase_a_sintoma(frase)
 
@@ -112,16 +130,20 @@ class SistemaExpertoGUI:
                 self.actualizar_lista_sintomas()
                 self.agregar_mensaje(f"Entendido. Síntoma registrado: {codigo_sintoma}", "exito")
 
-                self.sugerencias_actuales = sugerir_siguientes_pasos(self.sintomas_detectados)
+                # Actualizar sugerencias
+                if self.motor_prolog:
+                    self.sugerencias_actuales = self.motor_prolog.sugerir_siguientes_pasos(self.sintomas_detectados)
+                else:
+                    self.sugerencias_actuales = []
 
                 if self.sugerencias_actuales:
-                    msg = "Para confirmar, ¿ves algo de esto? (Escribe el número):\n"
+                    msg = "Para confirmar, ¿ves algo de esto? (Escribe el número o sigue describiendo):\n"
                     for i, sug in enumerate(self.sugerencias_actuales):
-                        msg += f"{i + 1}. {sug['desc']}\n"
+                        msg += f" {i + 1}. {sug['desc']}\n"
                     self.agregar_mensaje(msg, "sistema")
                 else:
                     self.agregar_mensaje(
-                        "No tengo más preguntas específicas. Presiona 'DIAGNOSTICAR' para ver el resultado.", "sistema")
+                        "No tengo más preguntas específicas o ya reportaste todos los síntomas conocidos. Presiona 'DIAGNOSTICAR' para ver el resultado.", "sistema")
                     self.sugerencias_actuales = []
             else:
                 self.agregar_mensaje("Ese síntoma ya lo habías mencionado.", "error")
@@ -132,19 +154,37 @@ class SistemaExpertoGUI:
         if not self.sintomas_detectados:
             self.agregar_mensaje("Aún no has reportado síntomas.", "error")
             return
+        
+        if not self.inicializacion_ok:
+            self.agregar_mensaje("El sistema no pudo iniciar correctamente. Revisa los errores CRÍTICOS.", "error")
+            return
 
-        self.agregar_mensaje("Analizando base de conocimientos...", "sistema")
+        self.agregar_mensaje("Consultando Base de Conocimiento (Lógica Prolog)...", "sistema")
 
-        resultado = diagnosticar(self.sintomas_detectados)
+        resultado = self.motor_prolog.diagnosticar(self.sintomas_detectados)
+        
+        nombre_fallo = resultado.get('fallo', 'Error Desconocido')
+        solucion = resultado.get('solucion', 'Sin solución')
 
+        # Mostramos el resultado al usuario
         resp = f"""
  RESULTADO DEL DIAGNÓSTICO:
  --------------------------
- FALLO: {resultado.get('fallo')}
- SOLUCIÓN: {resultado.get('solucion')}
+ FALLO: {nombre_fallo}
+ SOLUCIÓN: {solucion}
         """
         self.agregar_mensaje(resp, "exito")
 
+        # Guardamos el diagnóstico en el historial (Log en SQLite)
+        if "Error" not in nombre_fallo and nombre_fallo != "Desconocido":
+            guardar_log_diagnostico(
+                sintomas=self.sintomas_detectados,
+                fallo=nombre_fallo,
+                solucion=solucion
+            )
+            self.agregar_mensaje("Diagnóstico registrado en la base de datos (Log).", "sistema")
+
+        # Reinicio de variables para nueva consulta
         self.sintomas_detectados = []
         self.sugerencias_actuales = []
         self.actualizar_lista_sintomas()
