@@ -1,16 +1,19 @@
 import sqlite3
+import sys
 from pathlib import Path
 
-try:
-    # Ruta al archivo actual
-    CURRENT_FILE_PATH = Path(__file__).resolve()
+def get_base_path():
+    """ 
+    Obtiene la ruta base correcta.
+    Si está ejecutándose como .exe (PyInstaller), usa sys._MEIPASS.
+    Si está en desarrollo, usa la ruta del archivo actual.
+    """
+    if hasattr(sys, '_MEIPASS'):
+        return Path(sys._MEIPASS)
+    # Ajuste de la ruta para que BASE_DIR apunte al directorio 'sistema-experto-diagnostico-gui/'
+    return Path(__file__).resolve().parent.parent
 
-    # Ruta al directorio 'core/'
-    CORE_DIR = CURRENT_FILE_PATH.parent
-    # Ruta al directorio raíz del proyecto 'sistema-experto-diagnostico/'
-    BASE_DIR = CORE_DIR.parent
-except NameError:
-    BASE_DIR = Path.cwd()
+BASE_DIR = get_base_path()
 
 # Rutas a la base de datos y al esquema
 DB_DIR = BASE_DIR / "data" / "database"
@@ -36,7 +39,6 @@ def get_db_connection() -> sqlite3.Connection | None:
 
 
 def init_db():
-
     # Verificar si el archivo de esquema existe antes de continuar
     if not SCHEMA_PATH.exists():
         print(f"Error: No se encontró el archivo de esquema en {SCHEMA_PATH}")
@@ -80,6 +82,32 @@ def init_db():
             
     except sqlite3.Error as e:
         print(f"Error al ejecutar el script de inicialización: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+# FUNCIÓN PARA EL LOG
+def guardar_log_diagnostico(sintomas: list, fallo: str, solucion: str):
+    """
+    Guarda el resultado de un diagnóstico en la base de datos (Historial/Log).
+    """
+    conn = get_db_connection()
+    if not conn:
+        return
+
+    try:
+        # Convertimos la lista de síntomas a un string simple (ej: "S-001, S-005")
+        sintomas_str = ", ".join(sintomas)
+        
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO historial_diagnosticos (sintomas_reportados, fallo_detectado, solucion_ofrecida)
+            VALUES (?, ?, ?)
+        """, (sintomas_str, fallo, solucion))
+        
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Error al guardar log: {e}")
     finally:
         if conn:
             conn.close()
