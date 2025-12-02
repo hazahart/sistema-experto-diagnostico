@@ -1,5 +1,6 @@
 # core/motor_prolog.py
 import sys
+import re
 from pathlib import Path
 from pyswip import Prolog
 from .database import get_db_connection, BASE_DIR
@@ -7,120 +8,127 @@ from .database import get_db_connection, BASE_DIR
 class MotorProlog:
     def __init__(self):
         self.prolog = Prolog()
-        
-        # Ruta corregida, asumiendo que base_conocimientos.pl está en la carpeta 'data' 
-        ruta_conocimiento = BASE_DIR / "data" / "base_conocimientos.pl"
+        # Ruta al archivo .pl
+        self.ruta_conocimiento = BASE_DIR / "data" / "base_conocimientos.pl"
         
         try:
-            ruta_str = str(ruta_conocimiento).replace("\\", "/")
+            ruta_str = str(self.ruta_conocimiento).replace("\\", "/")
             if not Path(ruta_str).exists():
                  raise FileNotFoundError(f"Archivo .pl no encontrado en: {ruta_str}")
 
             self.prolog.consult(ruta_str)
             print(f"Base de conocimiento Prolog cargada desde: {ruta_str}")
         except FileNotFoundError as e:
-            raise ConnectionError(f"Error CRÍTICO: Archivo de base de conocimiento no encontrado: {e.args[0]}. Asegúrate de que '{ruta_conocimiento.name}' esté en la carpeta 'data/'.")
+            raise ConnectionError(f"Error CRÍTICO: Archivo .pl no encontrado: {e.args[0]}")
         except Exception as e:
-            raise ConnectionError(f"Error CRÍTICO al cargar Prolog: {e}. Asegúrate de tener SWI-Prolog instalado y en el PATH.")
+            raise ConnectionError(f"Error CRÍTICO al cargar Prolog: {e}")
 
     def _obtener_descripcion_sintoma(self, codigo_sintoma: str) -> str | None:
-        """
-        Busca en SQLite la descripción textual exacta de un síntoma dado su código (Ej: 'S-001').
-        """
+        """Busca descripción dado un código (S-001 -> 'El dispositivo...')"""
         conn = get_db_connection()
-        if not conn: 
-            return None
+        if not conn: return None
         try:
             cursor = conn.cursor()
-            query = "SELECT descripcion FROM sintomas WHERE codigo_sintoma = ?"
-            cursor.execute(query, (codigo_sintoma,))
+            cursor.execute("SELECT descripcion FROM sintomas WHERE codigo_sintoma = ?", (codigo_sintoma,))
             row = cursor.fetchone()
             return row['descripcion'] if row else None
-        except Exception as e:
-            print(f"Error consultando descripción de síntoma en SQLite: {e}")
-            return None
         finally:
-            if conn:
-                conn.close()
+            if conn: conn.close()
+
+    def _obtener_codigo_por_descripcion(self, descripcion: str) -> str | None:
+        """(NUEVO) Busca código dada una descripción ('El dispositivo...' -> S-001)"""
+        conn = get_db_connection()
+        if not conn: return None
+        try:
+            cursor = conn.cursor()
+            # Usamos LIKE para ser tolerantes con espacios extra o mayúsculas
+            cursor.execute("SELECT codigo_sintoma FROM sintomas WHERE descripcion LIKE ?", (descripcion,))
+            row = cursor.fetchone()
+            return row['codigo_sintoma'] if row else None
+        finally:
+            if conn: conn.close()
 
     def diagnosticar(self, lista_codigos_sintomas: list) -> dict:
-        """
-        Realiza el diagnóstico utilizando el motor Prolog.
-        """
+        """Realiza el diagnóstico utilizando el motor Prolog."""
         if not lista_codigos_sintomas:
-            return {"fallo": "No hay síntomas", "solucion": "Por favor, describe un síntoma."}
+            return {"fallo": "No hay síntomas", "solucion": "Describe un síntoma."}
 
-        # 1. Limpiar memoria de trabajo de Prolog de consultas anteriores
         self.prolog.retractall("verificar(_)")
-
-        # 2. Traducir códigos a descripciones y afirmar hechos
-        hechos_agregados = 0
+        
         for codigo in lista_codigos_sintomas:
             descripcion = self._obtener_descripcion_sintoma(codigo)
             if descripcion:
-                # Escapamos comillas simples
                 desc_clean = descripcion.replace("'", "\\'")
-                
-                # Inyección del hecho: verificar('Descripcion del sintoma')
                 self.prolog.assertz(f"verificar('{desc_clean}')")
-                hechos_agregados += 1
 
-        if hechos_agregados == 0:
-            return {"fallo": "Error de Datos", "solucion": "No se pudieron interpretar los síntomas en el catálogo."}
-
-        # 3. Consultar reglas: diagnostico(Codigo, Fallo, Solucion)
         try:
-            # La consulta devuelve el primer resultado que cumple TODAS las condiciones
             resultados = list(self.prolog.query("diagnostico(Cod, Nom, Sol)"))
-
             if resultados:
                 mejor_res = resultados[0]
                 return {
                     "fallo": mejor_res["Nom"],
-                    "solucion": mejor_res["Sol"],
-                    "coincidencias": len(lista_codigos_sintomas)
+                    "solucion": mejor_res["Sol"]
                 }
             else:
                 return {
                     "fallo": "Desconocido", 
-                    "solucion": "La combinación de síntomas no coincide con ninguna regla exacta en la base de conocimiento."
+                    "solucion": "No encontré una regla exacta para esta combinación."
                 }
         except Exception as e:
-            return {"fallo": "Error de Motor", "solucion": f"Error interno en motor Prolog: {e}"}
+            return {"fallo": "Error de Motor", "solucion": f"Error interno: {e}"}
 
     def sugerir_siguientes_pasos(self, lista_codigos_sintomas: list) -> list[dict]:
         """
-        Sugerir síntomas pendientes utilizando el catálogo de la BD.
-        Devuelve una lista limitada de síntomas que aún no han sido reportados.
+        (MEJORADO) Lee el archivo .pl para encontrar qué síntomas acompañan
+        a los que el usuario ya reportó.
         """
-        conn = get_db_connection()
-        if not conn:
+        if not lista_codigos_sintomas:
             return []
 
+        # 1. Obtenemos la descripción del ÚLTIMO síntoma que dijo el usuario
+        ultimo_codigo = lista_codigos_sintomas[-1]
+        desc_actual = self._obtener_descripcion_sintoma(ultimo_codigo)
+        
+        if not desc_actual:
+            return []
+
+        sintomas_relacionados_desc = set()
+        
         try:
-            # 1. Obtener los códigos de todos los síntomas posibles del catálogo
-            cursor = conn.cursor()
-            cursor.execute("SELECT codigo_sintoma, descripcion FROM sintomas")
-            all_sintomas = cursor.fetchall()
+            # 2. Leemos el archivo .pl como texto para buscar coincidencias
+            with open(self.ruta_conocimiento, "r", encoding="utf-8") as f:
+                contenido = f.read()
 
-            # 2. Convertir la lista de síntomas reportados a un set para búsqueda rápida
-            sintomas_reportados_set = set(lista_codigos_sintomas)
+            # 3. Separamos por reglas (cada regla termina en punto)
+            # Normalizamos espacios para facilitar búsqueda
+            contenido = contenido.replace("\n", " ")
+            reglas = contenido.split("regla(")
 
-            # 3. Filtrar los síntomas: solo devolver aquellos que NO han sido reportados
-            sugerencias_pendientes = []
-            for row in all_sintomas:
-                if row['codigo_sintoma'] not in sintomas_reportados_set:
-                    sugerencias_pendientes.append({
-                        "codigo": row['codigo_sintoma'],
-                        "desc": row['descripcion']
-                    })
-
-            # 4. Limitar la lista a las primeras 5 sugerencias (para no abrumar la GUI)
-            return sugerencias_pendientes[:5]
+            # 4. Buscamos reglas que contengan el síntoma actual
+            for regla in reglas:
+                if desc_actual in regla:
+                    # ¡Encontramos una regla relevante!
+                    # Extraigamos todos los textos dentro de verificar('...')
+                    coincidencias = re.findall(r"verificar\('([^']+)'\)", regla)
+                    for c in coincidencias:
+                        if c != desc_actual: # No sugerir lo que ya tiene
+                            sintomas_relacionados_desc.add(c)
 
         except Exception as e:
-            print(f"Error en la sugerencia de siguientes pasos: {e}")
+            print(f"Error analizando archivo .pl: {e}")
             return []
-        finally:
-            if conn:
-                conn.close()
+
+        # 5. Convertimos las descripciones encontradas a códigos S-XXX
+        sugerencias = []
+        codigos_ya_reportados = set(lista_codigos_sintomas)
+
+        for desc in sintomas_relacionados_desc:
+            codigo = self._obtener_codigo_por_descripcion(desc)
+            if codigo and codigo not in codigos_ya_reportados:
+                sugerencias.append({
+                    "codigo": codigo,
+                    "desc": desc
+                })
+
+        # 6. Devolvemos máximo 5 sugerencias INTELIGENTES
+        return sugerencias[:5]
