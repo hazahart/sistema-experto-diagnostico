@@ -28,9 +28,7 @@ El sistema utiliza **Python** y una base de datos **SQLite** (con posibilidad de
 - **Python 3.12+**
 - **SQLite3**
 - **Tkinter o PyQt5** (interfaz gráfica)
-- **NLTK o spaCy** (procesamiento de lenguaje natural)
-- **pytest / unittest** (pruebas)
-- **JSON / YAML** (estructura de conocimiento)
+- **PySwip**
 
 ---
 
@@ -40,48 +38,25 @@ El sistema utiliza **Python** y una base de datos **SQLite** (con posibilidad de
 sistema_experto_diagnostico/
 │
 ├── main.py                         # Punto de entrada principal
+|
+├── gui.py                          # Interfaz gráfica
 │
 ├── core/
 │   ├── __init__.py                 # Convierte 'core' en un paquete Python
 │   ├── motor_inferencia.py         # Motor de inferencia (razonamiento de reglas)
-│   ├── base_conocimiento.py        # Carga y gestión de reglas y hechos
+|   ├── motor_prolog.py             # Motor de integración de prolog
 │   ├── parser_pln.py               # Procesamiento de lenguaje natural
-│   ├── diagnostico.py              # Coordinador del proceso de diagnóstico
 │   └── database.py                 # Conexión y consultas a la base de datos
 │
 ├── data/
 │   ├── base_conocimiento.json      # Reglas y hechos
-│   ├── ejemplos_usuarios.txt       # Frases típicas de entrada
-│   ├── configuracion.yaml          # Configuración general
-│   ├── __init__.py (opcional)      # Solo si accedes a data desde Python
+│   ├── base_conocimiento.pl        # Carga y gestión de reglas y hechos
 │   └── database/
 │       ├── __init__.py (opcional)  # Solo si ejecutas código aquí
 │       ├── schema.sql              # Definición de tablas
 │       ├── data.sql                # Datos iniciales
 │       └── diagnostico.db          # Base de datos SQLite
 │
-├── gui/
-│   ├── __init__.py                 # Convierte 'gui' en paquete Python
-│   ├── interfaz.py                 # Interfaz gráfica principal
-│   ├── componentes/
-│   │   ├── __init__.py             # Submódulos visuales
-│   │   └── (otros componentes).py
-│   └── recursos/                   # Imágenes, íconos, estilos
-│
-├── tests/
-│   ├── __init__.py                 # Requerido para pytest y modularidad
-│   ├── test_motor_inferencia.py    # Pruebas unitarias del motor
-│   ├── test_database.py            # Pruebas de base de datos
-│   ├── test_parser_pln.py          # Pruebas del PLN
-│   └── test_diagnostico.py         # Pruebas del flujo completo
-│
-├── docs/
-│   ├── manual_usuario.md           # Guía de uso
-│   ├── especificacion_tecnica.md   # Diseño técnico
-│   ├── bitacora_validacion.md      # Resultados de pruebas
-│   └── entrevistas_expertos.md     # Aportaciones de expertos
-│
-├── requirements.txt                # Dependencias de Python
 └── README.md                       # Descripción del proyecto
 ```
 
